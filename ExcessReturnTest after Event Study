@@ -1,0 +1,54 @@
+% We consider the case of two mining companies Radex (rdx) and Veitscher (vei) who where the subject 
+% of some rumors about a possible takeover. The first newspaper reports about a possible 
+% 'cooperation' appeared on March 8, 1991. Similar reports appeared throughout March 29. 
+% On April 16 it was officially announced that Radex will buy a 51% share of Veitscher. 
+% The purpose of the analysis is to test for abnormal returns associated with this event. 
+% Details can be found in the file event.xls.
+clear all
+
+MyPath = 'D:\University\master NU\Advanced econometrics\Day 3\event\';;
+EVENT = readtable([MyPath, 'event.xls'],'Sheet','Data' );
+ret_rdx = log(EVENT.rdx(2:end)) - log(EVENT.rdx(1:end-1));
+ret_vei = log(EVENT.vei(2:end)) - log(EVENT.vei(1:end-1));
+ret_atx = log(EVENT.atx(2:end)) - log(EVENT.atx(1:end-1)); % Market
+
+%----------------
+event_date = 19910308;
+event_window = 7; % 2k days , k before k after
+sample_1 = (EVENT.date(2:end) < event_date - event_window );
+n1 = sum(sample_1);
+sample_0 = (EVENT.date(2:end) > event_date - event_window);
+
+% ---------------
+n0 = sum(sample_0);
+X = [ones(n1,1), ret_atx(sample_1,:)];
+X0 = [ones(n0,1), ret_atx(sample_0,:)];
+
+% Excess Return rdx
+OLS_rdx = fitlm(X(:,2),ret_rdx(sample_1,:), 'ResponseVar','rdx');
+disp(OLS_rdx.Coefficients.Estimate);
+
+pred_rdx = predict(OLS_rdx,X0(:,2));
+x_rdx = ret_rdx(sample_0,:)-pred_rdx;
+s2_rdx = OLS_rdx.RMSE;
+V_rdx = s2_rdx*(eye(n0) + X0*inv(X'*X)*X0');
+t_x_rdx = (ones(n0,1)'*x_rdx)/sqrt(ones(n0,1)'*V_rdx*ones(n0,1));
+
+% Excess Return vei
+OLS_vei = fitlm(X(:,2),ret_vei(sample_1,:));
+disp(OLS_vei.Coefficients.Estimate);
+pred_vei = predict(OLS_vei,X0(:,2));
+x_vei = ret_vei(sample_0,:)-pred_vei;
+s2_vei = OLS_vei.RMSE;
+V_vei = s2_vei*(eye(n0) + X0*inv(X'*X)*X0');
+t_x_vei = (ones(n0,1)'*x_vei)/sqrt(ones(n0,1)'*V_rdx*ones(n0,1));
+
+% plot excess returns
+[time k]=size(EVENT.date(sample_0,:));
+% time = datetime(EVENT.date(sample_0,:),'ConvertFrom','yyyymmdd');
+plot(1:time,cumsum(x_rdx),'r',1:time,cumsum(x_vei),'k');
+datetick('x')
+legend('rdx','vei')
+axis tight
+
+title('Cumulative Excess Returm')
