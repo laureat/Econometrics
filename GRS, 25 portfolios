@@ -1,0 +1,28 @@
+clear all
+clc
+MyPath = 'D:\University\master NU\Advanced econometrics\Day 3\';
+Fama=readtable([MyPath, 'Portfolios1.xlsx']);
+
+tbl_0=Fama(:,26:28);
+for i=1:25
+    tbl=Fama(:,i);
+    table=[tbl_0 tbl];
+    f=fitlm(table,'linear');
+    y_est(:,i)=predict(f,tbl_0);
+    e(:,i)=f.Residuals.Raw;
+    alpha(i,:)=f.Coefficients.Estimate(1);
+end
+
+
+[T N] = size(e);
+Q = alpha'*inv(cov(e))*alpha;
+sharpe_m=mean(Fama.MKT_RF)^2/var(Fama.MKT_RF);
+J=((T-N-1)/N)*(1+sharpe_m)*Q;
+
+p_J=1-fcdf(J,T-N-1,N);
+disp('GRS Test');
+disp([J,p_J])
+
+
+RMS=sqrt((alpha'*alpha)/25)
+MA=mean(abs(alpha))
